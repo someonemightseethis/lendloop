@@ -1,8 +1,8 @@
 # Local automation stack: n8n (+ its Postgres) and Mailpit as the mock inbox.
 # The Next.js app and Convex run on the host (`npm run dev`, `npx convex dev`).
 #
-#   cp .env.example .env   # fill in the secrets
-#   docker compose up -d
+#   cp n8n/.env.example n8n/.env   # fill in the secrets
+#   docker compose --env-file n8n/.env up -d
 #
 # n8n editor: http://localhost:5678   Mailpit inbox: http://localhost:8025
 
@@ -11,8 +11,8 @@ x-n8n-env: &n8n-env
   DB_POSTGRESDB_HOST: postgres
   DB_POSTGRESDB_DATABASE: n8n
   DB_POSTGRESDB_USER: n8n
-  DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in .env}
-  N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+  DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in n8n/.env}
+  N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in n8n/.env}
   GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
   TZ: ${GENERIC_TIMEZONE:-UTC}
   N8N_DIAGNOSTICS_ENABLED: "false"
@@ -22,9 +22,9 @@ x-n8n-env: &n8n-env
   NODE_FUNCTION_ALLOW_BUILTIN: crypto
   N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
   # LendLoop integration settings (see README > Environment variables).
-  CONVEX_TO_N8N_SECRET: ${CONVEX_TO_N8N_SECRET:?set CONVEX_TO_N8N_SECRET in .env}
-  N8N_TO_CONVEX_SECRET: ${N8N_TO_CONVEX_SECRET:?set N8N_TO_CONVEX_SECRET in .env}
-  CONVEX_SITE_URL: ${CONVEX_SITE_URL:?set CONVEX_SITE_URL in .env}
+  CONVEX_TO_N8N_SECRET: ${CONVEX_TO_N8N_SECRET:?set CONVEX_TO_N8N_SECRET in n8n/.env}
+  N8N_TO_CONVEX_SECRET: ${N8N_TO_CONVEX_SECRET:?set N8N_TO_CONVEX_SECRET in n8n/.env}
+  CONVEX_SITE_URL: ${CONVEX_SITE_URL:?set CONVEX_SITE_URL in n8n/.env}
   LENDLOOP_APP_URL: ${LENDLOOP_APP_URL:-http://localhost:3100}
   LENDLOOP_MAIL_FROM: ${LENDLOOP_MAIL_FROM:-LendLoop <noreply@lendloop.local>}
 
@@ -35,7 +35,7 @@ services:
     environment:
       POSTGRES_DB: n8n
       POSTGRES_USER: n8n
-      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in n8n/.env}
     volumes:
       - n8n-db:/var/lib/postgresql/data
     healthcheck:
