@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+bun.lock
+
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# env and secrets
+.env
+.env.*
+!.env.example
+
+# local tooling
+.local-logs/
+.clerk/
+.convex/
+.DS_Store
+coverage/

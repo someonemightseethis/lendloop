@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. A calm neutral palette with a single indigo accent; the dark
+ * palette swaps the same tokens, so components never branch on theme.
+ */
+:root {
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f4f9;
+  --border: #e3e8ef;
+  --text: #0a2540;
+  --text-muted: #5b6b80;
+  --accent: #635bff;
+  --accent-strong: #4f46e5;
+  --accent-soft: #eeedff;
+  --ring: rgb(99 91 255 / 0.35);
+  --shadow: 0 1px 2px rgb(10 37 64 / 0.04), 0 4px 12px rgb(10 37 64 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: #111a2c;
+    --surface-muted: #16213a;
+    --border: #22304b;
+    --text: #e7ecf4;
+    --text-muted: #9aa8bd;
+    --accent: #8b85ff;
+    --accent-strong: #a5a0ff;
+    --accent-soft: #221f4d;
+    --ring: rgb(139 133 255 / 0.45);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --shadow-card: var(--shadow);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The angled gradient band behind the public hero. */
+.hero-band {
+  background: linear-gradient(120deg, #635bff 0%, #8f6bff 35%, #3fb6ff 70%, #7ef0d0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 0 100%);
+}
