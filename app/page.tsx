@@ -13,7 +13,7 @@ export default function LandingPage() {
   return (
     <div className="relative overflow-hidden">
       <div aria-hidden className="hero-band absolute inset-x-0 top-0 h-[420px] sm:h-[460px]" />
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+      <header className="page-container relative flex items-center justify-between py-5">
         <Logo inverted />
         <SignedIn>
           <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
@@ -22,7 +22,7 @@ export default function LandingPage() {
         </SignedIn>
       </header>
 
-      <main className="relative mx-auto max-w-6xl px-4 sm:px-6">
+      <main className="page-container relative">
         <section className="max-w-2xl pb-28 pt-12 sm:pt-16">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">Neighborhood tool lending</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Borrow what you need. Lend what you don&apos;t.</h1>
@@ -53,7 +53,7 @@ export default function LandingPage() {
           <PublicToolList />
         </section>
 
-        <section className="grid gap-6 py-16 sm:grid-cols-3">
+        <section className="grid gap-6 py-16 sm:grid-cols-3 lg:gap-10">
           {STEPS.map((step, i) => (
             <div key={step.title}>
               <span className="text-xs font-semibold text-accent">0{i + 1}</span>

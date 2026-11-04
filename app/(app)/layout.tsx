@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <AppNav isAdmin={me?.role === "admin"} trusted={me?.trustedLender ?? false} />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{content}</main>
+      <main className="page-container py-8">{content}</main>
     </>
   );
 }

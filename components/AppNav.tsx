@@ -19,7 +19,7 @@ export function AppNav({ isAdmin, trusted }: { isAdmin: boolean; trusted: boolea
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-surface/85 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+      <div className="page-container flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
         <Logo href="/tools" />
         <nav aria-label="Main" className="order-3 -mx-1 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto">
           {links.map(({ href, label }) => {

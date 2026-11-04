@@ -13,7 +13,7 @@ export function PublicToolList() {
   if (tools.length === 0) return <EmptyState title="No tools available right now">Check back soon, or be the first to lend one.</EmptyState>;
 
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {tools.map((tool) => (
         <li key={tool.id}>
           <Card className="flex items-center justify-between gap-3 px-4 py-3">

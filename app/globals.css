@@ -49,6 +49,23 @@
   --shadow-card: var(--shadow);
 }
 
+/*
+ * Shared page container: one max width and gutter for the landing page, the
+ * nav and every signed-in view, so they all line up edge to edge.
+ */
+@utility page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1400px;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
 body {
   background: var(--bg);
   color: var(--text);

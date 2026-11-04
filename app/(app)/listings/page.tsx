@@ -43,7 +43,7 @@ export default function ListingsPage() {
       ) : listings.length === 0 ? (
         <EmptyState title="You haven't listed anything yet">List a tool and neighbors can request it.</EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid items-start gap-3 xl:grid-cols-2">
           {listings.map((listing) => (
             <li key={listing._id}>
               <ListingRow listing={listing} />

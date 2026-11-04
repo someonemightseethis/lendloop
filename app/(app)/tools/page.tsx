@@ -24,7 +24,7 @@ export default function ToolsPage() {
       ) : tools.length === 0 ? (
         <EmptyState title="No tools here yet">Try another category, or list one of your own.</EmptyState>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {tools.map((tool) => (
             <li key={tool._id}>
               <ToolCard tool={tool} isAdmin={me?.role === "admin"} />
