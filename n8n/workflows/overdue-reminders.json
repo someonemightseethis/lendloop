@@ -1,0 +1,252 @@
+{
+  "id": "lendloopOverdue1",
+  "name": "LendLoop: daily overdue reminders",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "lendloopErrors01",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": [],
+  "nodes": [
+    {
+      "id": "o1",
+      "name": "Every day at 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "o2",
+      "name": "Sign overdue request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// LendLoop request signing v1, shared by every n8n Code node that signs or verifies.\n// Mirrors convex/lib/signature.ts; tests/signature.test.ts checks the two agree.\n// Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto.\nconst crypto = require('crypto');\n\nconst REPLAY_WINDOW_SECONDS = 300;\n\nfunction lendloopSign(secret, body, nowMs = Date.now()) {\n  if (!secret) throw new Error('Signing secret is not configured');\n  const timestamp = String(Math.floor(nowMs / 1000));\n  const mac = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');\n  return { 'X-LendLoop-Timestamp': timestamp, 'X-LendLoop-Signature': `v1=${mac}` };\n}\n\nfunction lendloopVerify(secret, timestamp, signature, body, nowMs = Date.now()) {\n  if (!secret) return { ok: false, reason: 'not_configured' };\n  if (!timestamp || !signature) return { ok: false, reason: 'missing_headers' };\n  if (!/^\\d{1,12}$/.test(timestamp) || !/^v1=[0-9a-f]{64}$/.test(signature)) return { ok: false, reason: 'malformed' };\n  if (Math.abs(nowMs / 1000 - Number(timestamp)) > REPLAY_WINDOW_SECONDS) return { ok: false, reason: 'stale' };\n  const expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest();\n  const given = Buffer.from(signature.slice(3), 'hex');\n  return crypto.timingSafeEqual(expected, given) ? { ok: true } : { ok: false, reason: 'bad_signature' };\n}\n\n// --- sign-overdue-fetch.js ---\n// Overdue reminders: sign the (empty-body) GET to Convex.\nreturn [{ json: { headers: lendloopSign($env.N8N_TO_CONVEX_SECRET, '') } }];\n"
+      }
+    },
+    {
+      "id": "o3",
+      "name": "Fetch overdue loans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CONVEX_SITE_URL }}/automation/overdue",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ JSON.stringify($json.headers) }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "o4",
+      "name": "One item per loan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One item per overdue loan. No loans means no items, so the run ends here.\nreturn $input.first().json.loans.map((loan) => ({ json: loan }));\n"
+      }
+    },
+    {
+      "id": "o5",
+      "name": "Compose reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Runs once per loan: the reminder text for one borrower.\nconst loan = $json;\nconst days = loan.daysOverdue === 1 ? '1 day' : `${loan.daysOverdue} days`;\nconst appUrl = $env.LENDLOOP_APP_URL ?? 'http://localhost:3100';\nreturn {\n  json: {\n    to: loan.borrower.email,\n    subject: `LendLoop reminder: please return the ${loan.toolName}`,\n    text: `Hi ${loan.borrower.firstName},\\n\\nThe ${loan.toolName} you borrowed was due back on ${loan.endDate} (${days} ago). Please return it to its owner, who will mark it returned.\\n\\n${appUrl}\\n\\nLendLoop`,\n  },\n};\n"
+      }
+    },
+    {
+      "id": "o6",
+      "name": "Email borrower",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "lendloopMailpit1",
+          "name": "Mailpit SMTP"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "fromEmail": "={{ $env.LENDLOOP_MAIL_FROM }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    },
+    {
+      "id": "o7",
+      "name": "Sign write-back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// LendLoop request signing v1, shared by every n8n Code node that signs or verifies.\n// Mirrors convex/lib/signature.ts; tests/signature.test.ts checks the two agree.\n// Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto.\nconst crypto = require('crypto');\n\nconst REPLAY_WINDOW_SECONDS = 300;\n\nfunction lendloopSign(secret, body, nowMs = Date.now()) {\n  if (!secret) throw new Error('Signing secret is not configured');\n  const timestamp = String(Math.floor(nowMs / 1000));\n  const mac = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');\n  return { 'X-LendLoop-Timestamp': timestamp, 'X-LendLoop-Signature': `v1=${mac}` };\n}\n\nfunction lendloopVerify(secret, timestamp, signature, body, nowMs = Date.now()) {\n  if (!secret) return { ok: false, reason: 'not_configured' };\n  if (!timestamp || !signature) return { ok: false, reason: 'missing_headers' };\n  if (!/^\\d{1,12}$/.test(timestamp) || !/^v1=[0-9a-f]{64}$/.test(signature)) return { ok: false, reason: 'malformed' };\n  if (Math.abs(nowMs / 1000 - Number(timestamp)) > REPLAY_WINDOW_SECONDS) return { ok: false, reason: 'stale' };\n  const expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest();\n  const given = Buffer.from(signature.slice(3), 'hex');\n  return crypto.timingSafeEqual(expected, given) ? { ok: true } : { ok: false, reason: 'bad_signature' };\n}\n\n// --- sign-reminder-writeback.js ---\n// Runs once per loan, after the email step (which continues on error): report\n// \"sent\" or \"failed\" back to Convex. The key `${loanId}:${date}` makes the\n// write-back idempotent, so n8n retries never create duplicates.\nconst loan = $('One item per loan').item.json;\nconst error = $json.error;\nconst body = JSON.stringify({\n  key: loan.reminderKey,\n  loanId: loan.loanId,\n  status: error ? 'failed' : 'sent',\n  ...(error ? { detail: String(error.message ?? error).slice(0, 500) } : {}),\n});\nreturn { json: { body, headers: lendloopSign($env.N8N_TO_CONVEX_SECRET, body) } };\n"
+      }
+    },
+    {
+      "id": "o8",
+      "name": "Write reminder status to Convex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL }}/automation/reminders",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ JSON.stringify($json.headers) }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every day at 09:00": {
+      "main": [
+        [
+          {
+            "node": "Sign overdue request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign overdue request": {
+      "main": [
+        [
+          {
+            "node": "Fetch overdue loans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch overdue loans": {
+      "main": [
+        [
+          {
+            "node": "One item per loan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per loan": {
+      "main": [
+        [
+          {
+            "node": "Compose reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose reminder": {
+      "main": [
+        [
+          {
+            "node": "Email borrower",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email borrower": {
+      "main": [
+        [
+          {
+            "node": "Sign write-back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign write-back": {
+      "main": [
+        [
+          {
+            "node": "Write reminder status to Convex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

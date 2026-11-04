@@ -1,0 +1,90 @@
+{
+  "id": "lendloopErrors01",
+  "name": "LendLoop: error handler",
+  "active": false,
+  "pinData": {},
+  "tags": [],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "nodes": [
+    {
+      "id": "e1",
+      "name": "On workflow error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "e2",
+      "name": "Sign failure report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// LendLoop request signing v1, shared by every n8n Code node that signs or verifies.\n// Mirrors convex/lib/signature.ts; tests/signature.test.ts checks the two agree.\n// Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto.\nconst crypto = require('crypto');\n\nconst REPLAY_WINDOW_SECONDS = 300;\n\nfunction lendloopSign(secret, body, nowMs = Date.now()) {\n  if (!secret) throw new Error('Signing secret is not configured');\n  const timestamp = String(Math.floor(nowMs / 1000));\n  const mac = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');\n  return { 'X-LendLoop-Timestamp': timestamp, 'X-LendLoop-Signature': `v1=${mac}` };\n}\n\nfunction lendloopVerify(secret, timestamp, signature, body, nowMs = Date.now()) {\n  if (!secret) return { ok: false, reason: 'not_configured' };\n  if (!timestamp || !signature) return { ok: false, reason: 'missing_headers' };\n  if (!/^\\d{1,12}$/.test(timestamp) || !/^v1=[0-9a-f]{64}$/.test(signature)) return { ok: false, reason: 'malformed' };\n  if (Math.abs(nowMs / 1000 - Number(timestamp)) > REPLAY_WINDOW_SECONDS) return { ok: false, reason: 'stale' };\n  const expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest();\n  const given = Buffer.from(signature.slice(3), 'hex');\n  return crypto.timingSafeEqual(expected, given) ? { ok: true } : { ok: false, reason: 'bad_signature' };\n}\n\n// --- sign-failure-report.js ---\n// Error workflow: report the failed execution to Convex (deduped by execution id).\nconst { execution = {}, workflow = {}, trigger } = $input.first().json;\nconst error = execution.error ?? trigger?.error ?? {};\nconst body = JSON.stringify({\n  executionId: String(execution.id ?? `trigger-${workflow.id ?? 'unknown'}-${Date.now()}`),\n  workflow: workflow.name ?? 'unknown workflow',\n  node: execution.lastNodeExecuted ?? error.node?.name,\n  message: String(error.message ?? 'Unknown error').slice(0, 1000),\n});\nreturn [{ json: { body, headers: lendloopSign($env.N8N_TO_CONVEX_SECRET, body) } }];\n"
+      }
+    },
+    {
+      "id": "e3",
+      "name": "Report failure to Convex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL }}/automation/failures",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ JSON.stringify($json.headers) }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Sign failure report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign failure report": {
+      "main": [
+        [
+          {
+            "node": "Report failure to Convex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

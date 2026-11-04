@@ -14,7 +14,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "n8n:sync": "node scripts/n8n-code.mjs",
+    "check:secrets": "sh scripts/check-secrets.sh"
   },
   "dependencies": {
     "@clerk/nextjs": "6.39.8",

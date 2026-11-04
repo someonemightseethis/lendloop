@@ -1,0 +1,200 @@
+{
+  "id": "lendloopNotify01",
+  "name": "LendLoop: request notification",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "lendloopErrors01",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": [],
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Convex request event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6f1f3e0a-5a0c-4d55-9c55-2a7c1b9f0e11",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lendloop/request-events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Verify signature and compose",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// LendLoop request signing v1, shared by every n8n Code node that signs or verifies.\n// Mirrors convex/lib/signature.ts; tests/signature.test.ts checks the two agree.\n// Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto.\nconst crypto = require('crypto');\n\nconst REPLAY_WINDOW_SECONDS = 300;\n\nfunction lendloopSign(secret, body, nowMs = Date.now()) {\n  if (!secret) throw new Error('Signing secret is not configured');\n  const timestamp = String(Math.floor(nowMs / 1000));\n  const mac = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');\n  return { 'X-LendLoop-Timestamp': timestamp, 'X-LendLoop-Signature': `v1=${mac}` };\n}\n\nfunction lendloopVerify(secret, timestamp, signature, body, nowMs = Date.now()) {\n  if (!secret) return { ok: false, reason: 'not_configured' };\n  if (!timestamp || !signature) return { ok: false, reason: 'missing_headers' };\n  if (!/^\\d{1,12}$/.test(timestamp) || !/^v1=[0-9a-f]{64}$/.test(signature)) return { ok: false, reason: 'malformed' };\n  if (Math.abs(nowMs / 1000 - Number(timestamp)) > REPLAY_WINDOW_SECONDS) return { ok: false, reason: 'stale' };\n  const expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest();\n  const given = Buffer.from(signature.slice(3), 'hex');\n  return crypto.timingSafeEqual(expected, given) ? { ok: true } : { ok: false, reason: 'bad_signature' };\n}\n\n// --- verify-request-event.js ---\n// Request notification: verify the Convex signature over the raw body, drop\n// replays, and turn the minimal payload into one message for one person.\nconst webhook = $input.first();\nconst raw = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\nconst headers = webhook.json.headers;\nconst check = lendloopVerify(\n  $env.CONVEX_TO_N8N_SECRET,\n  headers['x-lendloop-timestamp'],\n  headers['x-lendloop-signature'],\n  raw,\n);\nif (!check.ok) return [{ json: { notify: false, statusCode: 401, response: { error: 'unauthorized' }, reason: check.reason } }];\n\nconst event = JSON.parse(raw);\n\n// Inside the replay window the timestamp alone can't stop a replay, so remember\n// accepted event ids. A repeat (Convex retrying after a lost response) is\n// acknowledged without sending a second message.\nconst state = $getWorkflowStaticData('global');\nconst now = Date.now();\nconst seen = Object.fromEntries(\n  Object.entries(state.seenEvents ?? {}).filter(([, at]) => now - at < 2 * REPLAY_WINDOW_SECONDS * 1000),\n);\nconst duplicate = Boolean(seen[event.eventId]);\nseen[event.eventId] = seen[event.eventId] ?? now;\nstate.seenEvents = seen;\nif (duplicate) return [{ json: { notify: false, statusCode: 200, response: { result: 'duplicate' } } }];\n\nconst range = event.startDate === event.endDate ? event.startDate : `${event.startDate} to ${event.endDate}`;\nconst MESSAGES = {\n  'request.created': [`New request for your ${event.toolName}`, `A neighbor asked to borrow your ${event.toolName} for ${range}. Approve or decline it under Incoming requests.`],\n  'request.approved': [`Approved: ${event.toolName}`, `Good news: your request to borrow the ${event.toolName} for ${range} was approved.`],\n  'request.declined': [`Declined: ${event.toolName}`, `Your request to borrow the ${event.toolName} for ${range} was declined. There are other tools to try on LendLoop.`],\n  'request.cancelled': [`Cancelled: ${event.toolName}`, `The request to borrow your ${event.toolName} for ${range} was cancelled by the borrower.`],\n  'loan.returned': [`Returned: ${event.toolName}`, `The ${event.toolName} you borrowed for ${range} was marked returned. Thanks for borrowing responsibly.`],\n  'listing.removed': [`No longer available: ${event.toolName}`, `The ${event.toolName} listing was removed, so your request or booking for ${range} was closed.`],\n};\nconst message = MESSAGES[event.event];\nif (!message) return [{ json: { notify: false, statusCode: 422, response: { error: 'unknown_event' } } }];\n\nconst [subject, line] = message;\nconst appUrl = $env.LENDLOOP_APP_URL ?? 'http://localhost:3100';\nreturn [\n  {\n    json: {\n      notify: true,\n      statusCode: 202,\n      response: { result: 'accepted' },\n      to: event.recipient.email,\n      subject: `LendLoop: ${subject}`,\n      text: `Hi ${event.recipient.firstName},\\n\\n${line}\\n\\n${appUrl}\\n\\nLendLoop`,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Should notify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.notify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Accept (202)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.response) }}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Email recipient",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        -100
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "lendloopMailpit1",
+          "name": "Mailpit SMTP"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "fromEmail": "={{ $env.LENDLOOP_MAIL_FROM }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Reject or acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.response) }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Convex request event": {
+      "main": [
+        [
+          {
+            "node": "Verify signature and compose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify signature and compose": {
+      "main": [
+        [
+          {
+            "node": "Should notify?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should notify?": {
+      "main": [
+        [
+          {
+            "node": "Accept (202)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject or acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept (202)": {
+      "main": [
+        [
+          {
+            "node": "Email recipient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
