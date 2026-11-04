@@ -24,6 +24,7 @@ import type * as lib_signature from "../lib/signature.js";
 import type * as lib_transitions from "../lib/transitions.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as loans from "../loans.js";
+import type * as seed from "../seed.js";
 import type * as tools from "../tools.js";
 import type * as users from "../users.js";
 
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/transitions": typeof lib_transitions;
   "lib/validation": typeof lib_validation;
   loans: typeof loans;
+  seed: typeof seed;
   tools: typeof tools;
   users: typeof users;
 }>;
