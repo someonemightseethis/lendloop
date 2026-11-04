@@ -16,6 +16,7 @@
   --accent-soft: #eeedff;
   --ring: rgb(99 91 255 / 0.35);
   --shadow: 0 1px 2px rgb(10 37 64 / 0.04), 0 4px 12px rgb(10 37 64 / 0.06);
+  --shadow-popover: 0 2px 6px rgb(10 37 64 / 0.08), 0 12px 32px rgb(10 37 64 / 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +32,7 @@
     --accent-soft: #221f4d;
     --ring: rgb(139 133 255 / 0.45);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+    --shadow-popover: 0 2px 6px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.45);
     color-scheme: dark;
   }
 }
@@ -47,6 +49,7 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --shadow-card: var(--shadow);
+  --shadow-pop: var(--shadow-popover);
 }
 
 /*

@@ -5,11 +5,15 @@ import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { vLoanStatus, type LoanStatus as Status } from "@/convex/lib/domain";
 import { LoanStatus } from "@/components/loans/LoanStatus";
-import { Select } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { EmptyState, LoadingRows } from "@/components/ui/States";
 import { formatRange } from "@/lib/format";
 
 const STATUSES: Status[] = vLoanStatus.members.map((m) => m.value);
+const STATUS_OPTIONS: { value: Status | ""; label: string }[] = [
+  { value: "", label: "All statuses" },
+  ...STATUSES.map((s) => ({ value: s, label: s })),
+];
 const th = "px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted";
 
 export function AllLoans() {
@@ -21,14 +25,7 @@ export function AllLoans() {
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold">All loans</h2>
         <div className="w-44">
-          <Select aria-label="Filter by status" value={status ?? ""} onChange={(e) => setStatus((e.target.value || undefined) as Status | undefined)}>
-            <option value="">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </Select>
+          <Select aria-label="Filter by status" value={status ?? ""} onChange={(v) => setStatus(v || undefined)} options={STATUS_OPTIONS} />
         </div>
       </div>
       {loans === undefined ? (

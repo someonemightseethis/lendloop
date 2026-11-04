@@ -3,11 +3,15 @@
 import { useState, type FormEvent } from "react";
 import { CATEGORIES, CONDITIONS, type Category, type Condition } from "@/convex/lib/domain";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Select, Textarea } from "@/components/ui/Field";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { ErrorNote } from "@/components/ui/States";
 import { categoryLabel, conditionLabel } from "@/lib/format";
 
 export type ToolDraft = { name: string; category: Category; condition: Condition; description: string };
+
+const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: categoryLabel(c) }));
+const CONDITION_OPTIONS = CONDITIONS.map((c) => ({ value: c, label: conditionLabel(c) }));
 
 const EMPTY: ToolDraft = { name: "", category: "power_tools", condition: "good", description: "" };
 
@@ -44,22 +48,10 @@ export function ToolForm({
           </Field>
         </div>
         <Field label="Category">
-          <Select value={draft.category} onChange={(e) => set("category", e.target.value as Category)}>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {categoryLabel(c)}
-              </option>
-            ))}
-          </Select>
+          <Select<Category> name="category" value={draft.category} onChange={(v) => set("category", v)} options={CATEGORY_OPTIONS} />
         </Field>
         <Field label="Condition">
-          <Select value={draft.condition} onChange={(e) => set("condition", e.target.value as Condition)}>
-            {CONDITIONS.map((c) => (
-              <option key={c} value={c}>
-                {conditionLabel(c)}
-              </option>
-            ))}
-          </Select>
+          <Select<Condition> name="condition" value={draft.condition} onChange={(v) => set("condition", v)} options={CONDITION_OPTIONS} />
         </Field>
         <div className="sm:col-span-3">
           <Field label="Short description" hint={`${draft.description.length}/280`}>
