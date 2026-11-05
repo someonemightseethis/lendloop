@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Category } from "@/convex/lib/domain";
 import { CategoryFilter } from "@/components/tools/CategoryFilter";
@@ -10,7 +10,10 @@ import { EmptyState, LoadingRows, PageHeader } from "@/components/ui/States";
 
 export default function ToolsPage() {
   const [category, setCategory] = useState<Category | undefined>();
-  const tools = useQuery(api.tools.list, { category });
+  // One live subscription for the whole catalogue, filtered here: switching categories is instant
+  // and never drops back to the loading skeleton.
+  const allTools = useQuery(api.tools.list, {});
+  const tools = useMemo(() => allTools?.filter((tool) => !category || tool.category === category), [allTools, category]);
   const me = useQuery(api.users.me);
 
   return (
