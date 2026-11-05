@@ -15,6 +15,10 @@ const CONDITION_OPTIONS = CONDITIONS.map((c) => ({ value: c, label: conditionLab
 
 const EMPTY: ToolDraft = { name: "", category: "power_tools", condition: "good", description: "" };
 
+function pickDraft({ name, category, condition, description }: ToolDraft): ToolDraft {
+  return { name, category, condition, description };
+}
+
 /** Create and edit share one form. `onSubmit` resolves true when the save succeeded. */
 export function ToolForm({
   initial = EMPTY,
@@ -31,7 +35,8 @@ export function ToolForm({
   onSubmit: (draft: ToolDraft) => Promise<boolean>;
   onCancel?: () => void;
 }) {
-  const [draft, setDraft] = useState(initial);
+  // Copy only the editable fields: callers may pass a full listing, and Convex rejects unknown fields.
+  const [draft, setDraft] = useState<ToolDraft>(() => pickDraft(initial));
   const set = <K extends keyof ToolDraft>(key: K, value: ToolDraft[K]) => setDraft((d) => ({ ...d, [key]: value }));
 
   async function handleSubmit(event: FormEvent) {
@@ -41,8 +46,8 @@ export function ToolForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-3">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <Field label="Name">
             <Input required minLength={2} maxLength={60} value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="Cordless drill" />
           </Field>
@@ -53,7 +58,7 @@ export function ToolForm({
         <Field label="Condition">
           <Select<Condition> name="condition" value={draft.condition} onChange={(v) => set("condition", v)} options={CONDITION_OPTIONS} />
         </Field>
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-2">
           <Field label="Short description" hint={`${draft.description.length}/280`}>
             <Textarea
               rows={2}
