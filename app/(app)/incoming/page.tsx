@@ -16,7 +16,7 @@ export default function IncomingRequestsPage() {
       {loans === undefined ? (
         <LoadingRows />
       ) : loans.length === 0 ? (
-        <EmptyState title="No requests for your tools yet" />
+        <EmptyState title="No requests for your tools yet">When a neighbor asks to borrow one of your listings, it shows up here.</EmptyState>
       ) : (
         <LoanTable loans={loans} perspective="owner" />
       )}
