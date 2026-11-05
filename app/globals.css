@@ -83,5 +83,9 @@ body {
 /* The angled gradient band behind the public hero. */
 .hero-band {
   background: linear-gradient(120deg, #635bff 0%, #8f6bff 35%, #3fb6ff 70%, #7ef0d0 100%);
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 0 100%);
+  /* The slant only uses the hero's bottom padding, never the area behind the copy. */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 5rem), 0 100%);
+  @media (width >= 40rem) {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8rem), 0 100%);
+  }
 }

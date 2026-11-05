@@ -12,41 +12,46 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <div className="relative overflow-hidden">
-      <div aria-hidden className="hero-band absolute inset-x-0 top-0 h-[420px] sm:h-[460px]" />
-      <header className="page-container relative flex items-center justify-between py-5">
-        <Logo inverted />
-        <SignedIn>
-          <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
-            Open app →
-          </Link>
-        </SignedIn>
-      </header>
+      {/* The band sizes itself to the hero, so the white copy always sits on the gradient. */}
+      <div className="relative">
+        <div aria-hidden className="hero-band absolute inset-0" />
+        <header className="page-container relative flex items-center justify-between py-5">
+          <Logo inverted />
+          <SignedIn>
+            <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
+              Open app →
+            </Link>
+          </SignedIn>
+        </header>
 
-      <main className="page-container relative">
-        <section className="max-w-2xl pb-28 pt-12 sm:pt-16">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">Neighborhood tool lending</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Borrow what you need. Lend what you don&apos;t.</h1>
-          <p className="mt-4 max-w-xl text-base text-white/85">
-            LendLoop is a shared shelf for your street: list the tools you can spare and borrow the ones you need for the weekend.
-          </p>
-          <div className="mt-8">
-            <SignedOut>
-              <SignInButton mode="modal" forceRedirectUrl="/tools">
-                <button type="button" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                  Sign in to lend or borrow →
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Link href="/tools" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                Browse tools →
-              </Link>
-            </SignedIn>
+        <section className="page-container relative pb-28 pt-12 sm:pb-32 sm:pt-16">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">Neighborhood tool lending</p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Borrow what you need. Lend what you don&apos;t.</h1>
+            <p className="mt-4 max-w-xl text-base text-white/85">
+              LendLoop is a shared shelf for your street: list the tools you can spare and borrow the ones you need for the weekend.
+            </p>
+            <div className="mt-8">
+              <SignedOut>
+                <SignInButton mode="modal" forceRedirectUrl="/tools">
+                  <button type="button" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                    Sign in to lend or borrow →
+                  </button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/tools" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                  Browse tools →
+                </Link>
+              </SignedIn>
+            </div>
           </div>
         </section>
+      </div>
 
+      <main className="page-container relative mt-8">
         <section aria-labelledby="available" className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-8">
-          <div className="mb-5 flex items-baseline justify-between gap-4">
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 id="available" className="text-lg font-semibold tracking-tight">Available now</h2>
             <span className="text-xs text-muted">Sign in to see details and request dates</span>
           </div>
