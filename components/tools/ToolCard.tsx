@@ -42,13 +42,8 @@ export function ToolCard({ tool, isAdmin }: { tool: Tool; isAdmin: boolean }) {
         </div>
       </dl>
 
-      <div className="mt-auto pt-4">
+      <div className="mt-auto space-y-3 pt-4">
         {sent && <p className="text-sm text-emerald-700 dark:text-emerald-300">Request sent. Track it under My requests.</p>}
-        {!tool.isMine && !sent && !requesting && (
-          <Button size="sm" variant="secondary" onClick={() => setRequesting(true)}>
-            Request to borrow
-          </Button>
-        )}
         {requesting && (
           <RequestForm
             toolId={tool._id}
@@ -59,14 +54,21 @@ export function ToolCard({ tool, isAdmin }: { tool: Tool; isAdmin: boolean }) {
             }}
           />
         )}
-        {isAdmin && (
-          <div className="mt-3 space-y-2">
-            <ConfirmButton disabled={remove.pending} onConfirm={() => remove.call({ toolId: tool._id })}>
-              Remove listing (admin)
-            </ConfirmButton>
-            <ErrorNote message={remove.error} />
+        {((!tool.isMine && !sent && !requesting) || isAdmin) && (
+          <div className="flex flex-wrap gap-2">
+            {!tool.isMine && !sent && !requesting && (
+              <Button size="sm" variant="secondary" onClick={() => setRequesting(true)}>
+                Request to borrow
+              </Button>
+            )}
+            {isAdmin && (
+              <ConfirmButton disabled={remove.pending} onConfirm={() => remove.call({ toolId: tool._id })}>
+                Remove listing
+              </ConfirmButton>
+            )}
           </div>
         )}
+        <ErrorNote message={remove.error} />
       </div>
     </Card>
   );

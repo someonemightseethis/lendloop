@@ -9,10 +9,17 @@ import { Select } from "@/components/ui/Select";
 import { EmptyState, LoadingRows } from "@/components/ui/States";
 import { formatRange } from "@/lib/format";
 
+const STATUS_LABELS: Record<Status, string> = {
+  requested: "Pending",
+  approved: "Approved",
+  declined: "Declined",
+  cancelled: "Cancelled",
+  returned: "Returned",
+};
 const STATUSES: Status[] = vLoanStatus.members.map((m) => m.value);
 const STATUS_OPTIONS: { value: Status | ""; label: string }[] = [
   { value: "", label: "All statuses" },
-  ...STATUSES.map((s) => ({ value: s, label: s })),
+  ...STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
 ];
 const th = "px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted";
 

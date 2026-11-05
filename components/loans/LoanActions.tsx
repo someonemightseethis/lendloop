@@ -47,7 +47,7 @@ export function LoanActions({ loan, perspective }: { loan: LoanView; perspective
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">{buttons}</div>
+      <div className="flex flex-wrap justify-end gap-2">{buttons}</div>
       <ErrorNote message={error} />
     </div>
   );

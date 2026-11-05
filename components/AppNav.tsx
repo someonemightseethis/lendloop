@@ -21,7 +21,7 @@ export function AppNav({ isAdmin, trusted }: { isAdmin: boolean; trusted: boolea
     <header className="sticky top-0 z-10 border-b border-border bg-surface/85 backdrop-blur">
       <div className="page-container flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
         <Logo href="/tools" />
-        <nav aria-label="Main" className="order-3 -mx-1 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto">
+        <nav aria-label="Main" className="order-3 -mx-1 flex w-full flex-wrap gap-1 sm:order-none sm:w-auto">
           {links.map(({ href, label }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
