@@ -1,24 +1,22 @@
-"use client";
-
 import type { ReactNode } from "react";
-import { AppNav } from "@/components/AppNav";
-import { ErrorNote, LoadingRows } from "@/components/ui/States";
-import { useStoreUser } from "@/components/useStoreUser";
+import Link from "next/link";
+import { SignedInShell } from "./signed-in-shell";
 
-/** Signed-in shell. Pages render once the viewer exists in Convex, so their queries never race the first sign-in. */
+export const dynamic = "force-dynamic";
+
+const backendReady = Boolean(process.env.NEXT_PUBLIC_CONVEX_URL && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { me, error, authLoading, isAuthenticated } = useStoreUser();
-
-  let content: ReactNode = children;
-  if (error) content = <ErrorNote message={error} />;
-  else if (!authLoading && !isAuthenticated)
-    content = <ErrorNote message="We couldn't verify your session with the backend. Check the Clerk and Convex setup in the README." />;
-  else if (!me) content = <LoadingRows />;
-
-  return (
-    <>
-      <AppNav isAdmin={me?.role === "admin"} trusted={me?.trustedLender ?? false} />
-      <main className="page-container py-8">{content}</main>
-    </>
-  );
+  if (!backendReady) {
+    return (
+      <main className="page-container py-16">
+        <h1 className="text-xl font-semibold tracking-tight">Sign-in is not set up yet</h1>
+        <p className="mt-2 text-sm text-muted">Clerk and Convex keys are missing on this server, so lending and borrowing stay closed.</p>
+        <Link href="/" className="mt-6 inline-flex text-sm font-medium text-accent">
+          Back to the board
+        </Link>
+      </main>
+    );
+  }
+  return <SignedInShell>{children}</SignedInShell>;
 }
