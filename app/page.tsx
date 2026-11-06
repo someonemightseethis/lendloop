@@ -1,4 +1,5 @@
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { PublicToolList } from "@/components/tools/PublicToolList";
@@ -19,8 +20,9 @@ export default function LandingPage() {
           <Logo inverted />
           {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
             <SignedIn>
-              <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
-                Open app →
+              <Link href="/tools" className="inline-flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white">
+                Open app
+                <ArrowRight aria-hidden className="size-4" />
               </Link>
             </SignedIn>
           ) : null}
@@ -38,20 +40,23 @@ export default function LandingPage() {
                 <>
                   <SignedOut>
                     <SignInButton mode="modal" forceRedirectUrl="/tools">
-                      <button type="button" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                        Sign in to lend or borrow →
+                      <button type="button" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                        Sign in to lend or borrow
+                        <ArrowRight aria-hidden className="size-4" />
                       </button>
                     </SignInButton>
                   </SignedOut>
                   <SignedIn>
-                    <Link href="/tools" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                      Browse tools →
+                    <Link href="/tools" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                      Browse tools
+                      <ArrowRight aria-hidden className="size-4" />
                     </Link>
                   </SignedIn>
                 </>
               ) : (
-                <span className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm">
-                  Sign in to lend or borrow →
+                <span className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm">
+                  Sign in to lend or borrow
+                  <ArrowRight aria-hidden className="size-4" />
                 </span>
               )}
             </div>
