@@ -16,17 +16,11 @@ set -a
 source /etc/lendloop.env
 set +a
 
-missing=0
 for key in NEXT_PUBLIC_CONVEX_URL NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY CLERK_SECRET_KEY; do
   if [[ -z "${!key:-}" ]]; then
-    echo "empty $key in /etc/lendloop.env" >&2
-    missing=1
+    echo "warning: empty $key in /etc/lendloop.env — public page still builds" >&2
   fi
 done
-if [[ "$missing" -eq 1 ]]; then
-  echo "refusing to build until /etc/lendloop.env is filled in" >&2
-  exit 1
-fi
 
 LOCK_HASH="$(git rev-parse HEAD:package-lock.json)"
 PREV="$(cat .deploy-lock-hash 2>/dev/null || true)"

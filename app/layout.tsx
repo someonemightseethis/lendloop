@@ -7,6 +7,17 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
+const clerkReady = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY);
+
+function AppProviders({ children }: { children: ReactNode }) {
+  if (!clerkReady) return children;
+  return (
+    <ClerkProvider dynamic>
+      <ConvexClientProvider>{children}</ConvexClientProvider>
+    </ClerkProvider>
+  );
+}
+
 export const metadata: Metadata = {
   title: "LendLoop",
   description: "Borrow what you need. Lend what you don't. A neighborhood tool-lending board.",
@@ -16,9 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans">
-        <ClerkProvider dynamic>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
-        </ClerkProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

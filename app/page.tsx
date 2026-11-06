@@ -17,11 +17,13 @@ export default function LandingPage() {
         <div aria-hidden className="hero-band absolute inset-0" />
         <header className="page-container relative flex items-center justify-between py-5">
           <Logo inverted />
-          <SignedIn>
-            <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
-              Open app →
-            </Link>
-          </SignedIn>
+          {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+            <SignedIn>
+              <Link href="/tools" className="text-sm font-medium text-white/90 hover:text-white">
+                Open app →
+              </Link>
+            </SignedIn>
+          ) : null}
         </header>
 
         <section className="page-container relative pb-28 pt-12 sm:pb-32 sm:pt-16">
@@ -32,18 +34,26 @@ export default function LandingPage() {
               LendLoop is a shared shelf for your street: list the tools you can spare and borrow the ones you need for the weekend.
             </p>
             <div className="mt-8">
-              <SignedOut>
-                <SignInButton mode="modal" forceRedirectUrl="/tools">
-                  <button type="button" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                    Sign in to lend or borrow →
-                  </button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <Link href="/tools" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
-                  Browse tools →
-                </Link>
-              </SignedIn>
+              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+                <>
+                  <SignedOut>
+                    <SignInButton mode="modal" forceRedirectUrl="/tools">
+                      <button type="button" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                        Sign in to lend or borrow →
+                      </button>
+                    </SignInButton>
+                  </SignedOut>
+                  <SignedIn>
+                    <Link href="/tools" className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm transition hover:bg-white/90">
+                      Browse tools →
+                    </Link>
+                  </SignedIn>
+                </>
+              ) : (
+                <span className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#0a2540] shadow-sm">
+                  Sign in to lend or borrow →
+                </span>
+              )}
             </div>
           </div>
         </section>

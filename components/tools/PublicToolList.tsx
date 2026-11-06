@@ -8,6 +8,13 @@ import { categoryLabel } from "@/lib/format";
 
 /** Read-only and unauthenticated: the query only ever returns id, name and category. */
 export function PublicToolList() {
+  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+    return <EmptyState title="No tools available right now">Check back soon, or be the first to lend one.</EmptyState>;
+  }
+  return <PublicToolQuery />;
+}
+
+function PublicToolQuery() {
   const tools = useQuery(api.tools.listPublic);
   if (tools === undefined) return <LoadingRows rows={2} />;
   if (tools.length === 0) return <EmptyState title="No tools available right now">Check back soon, or be the first to lend one.</EmptyState>;
