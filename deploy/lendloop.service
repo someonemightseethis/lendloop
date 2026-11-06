@@ -1,0 +1,17 @@
+[Unit]
+Description=LendLoop Next.js
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/lendloop.ahmedrameezaka.com
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/lendloop.env
+ExecStart=/var/www/lendloop.ahmedrameezaka.com/node_modules/.bin/next start -H 127.0.0.1 -p 3100
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

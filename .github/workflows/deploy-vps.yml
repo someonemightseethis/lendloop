@@ -1,0 +1,39 @@
+name: Deploy to VPS (main)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy main
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          set -euo pipefail
+          ssh "${VPS_USER}@${VPS_HOST}" "bash /var/www/lendloop.ahmedrameezaka.com/scripts/server-update.sh --force"
+
+      - name: Check homepage
+        run: |
+          sleep 2
+          code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --retry-all-errors https://lendloop.ahmedrameezaka.com/ || true)"
+          echo "https status $code"
+          if [[ "$code" == "000" ]]; then
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --retry-all-errors http://lendloop.ahmedrameezaka.com/ || true)"
+            echo "http status $code"
+          fi
+          test "$code" != "000"
