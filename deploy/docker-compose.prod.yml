@@ -1,0 +1,105 @@
+# Production backend for lendloop.ahmedrameezaka.com: self-hosted Convex + n8n.
+# Lives on the VPS as /opt/lendloop-stack/docker-compose.yml, secrets in
+# /opt/lendloop-stack/.env (mode 600, see deploy/stack.env.example).
+#
+#   cd /opt/lendloop-stack && docker compose up -d
+#
+# Why this shape:
+# - Both services bind to 127.0.0.1 only. nginx exposes the Convex client API
+#   under https://lendloop.ahmedrameezaka.com/convex/ (the browser needs it).
+#   Convex HTTP actions (/automation/*) and n8n are never public: the two
+#   containers reach each other on the compose network.
+# - n8n uses its built-in SQLite. LendLoop's workflows keep almost no state,
+#   so a Postgres container would only cost memory.
+# - No Convex dashboard container (memory). Manage Convex with the CLI and the
+#   admin key: `npx convex env|run|logs` (see README > Production).
+
+x-n8n-env: &n8n-env
+  N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set in .env}
+  GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+  TZ: ${GENERIC_TIMEZONE:-UTC}
+  N8N_DIAGNOSTICS_ENABLED: "false"
+  N8N_PERSONALIZATION_ENABLED: "false"
+  N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+  N8N_HIRING_BANNER_ENABLED: "false"
+  # Prune old (failed) executions so SQLite stays small.
+  EXECUTIONS_DATA_PRUNE: "true"
+  EXECUTIONS_DATA_MAX_AGE: "336"
+  DB_SQLITE_VACUUM_ON_STARTUP: "true"
+  # Code nodes sign and verify with Node's crypto and read the secrets below.
+  NODE_FUNCTION_ALLOW_BUILTIN: crypto
+  N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+  CONVEX_TO_N8N_SECRET: ${CONVEX_TO_N8N_SECRET:?set in .env}
+  N8N_TO_CONVEX_SECRET: ${N8N_TO_CONVEX_SECRET:?set in .env}
+  CONVEX_SITE_URL: http://convex:3211
+  LENDLOOP_APP_URL: https://lendloop.ahmedrameezaka.com
+  LENDLOOP_MAIL_FROM: ${LENDLOOP_MAIL_FROM:-LendLoop <noreply@lendloop.ahmedrameezaka.com>}
+  NODE_OPTIONS: --max-old-space-size=256
+
+services:
+  convex:
+    image: ghcr.io/convex/convex-backend@sha256:e9c084e8bd6c1f249012c672193f0988c748824f55a24cdad45f6185a8462f9a # rev d1fcbeaf (2026-10-28)
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    mem_limit: 256m # idles around 75 MiB
+    ports:
+      - "127.0.0.1:3210:3210"
+    volumes:
+      - convex-data:/convex/data
+    environment:
+      INSTANCE_NAME: lendloop
+      INSTANCE_SECRET: ${CONVEX_INSTANCE_SECRET:?set in .env}
+      CONVEX_CLOUD_ORIGIN: https://lendloop.ahmedrameezaka.com/convex
+      CONVEX_SITE_ORIGIN: http://convex:3211
+      DISABLE_BEACON: "true"
+      RUST_LOG: warn
+      # Small box, small app: fewer concurrent workers keeps memory down.
+      APPLICATION_MAX_CONCURRENT_MUTATIONS: "4"
+      APPLICATION_MAX_CONCURRENT_QUERIES: "4"
+      APPLICATION_MAX_CONCURRENT_V8_ACTIONS: "4"
+      APPLICATION_MAX_CONCURRENT_NODE_ACTIONS: "2"
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 30s
+      start_period: 10s
+
+  n8n:
+    image: n8nio/n8n:2.43.8
+    restart: unless-stopped
+    mem_limit: 512m # idles around 380 MiB (main + JS task runner)
+    environment: *n8n-env
+    ports:
+      # Editor via SSH tunnel only: ssh -L 5678:127.0.0.1:5678 hostingervps-rrr
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    depends_on:
+      convex:
+        condition: service_started
+
+  # One-shot seeding, run by hand (n8n stopped). Run n8n CLI commands in a
+  # one-off container like this one, not `docker compose exec n8n`: a second
+  # n8n process inside the running container hits its memory limit.: imports the SMTP credential
+  # and the three workflows from the deployed repo, then publishes them.
+  #   docker compose stop n8n && docker compose run --rm n8n-seed && docker compose up -d n8n
+  n8n-seed:
+    image: n8nio/n8n:2.43.8
+    profiles: [seed]
+    environment: *n8n-env
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - /var/www/lendloop.ahmedrameezaka.com/n8n/workflows:/seed/workflows:ro
+      - ./smtp-credential.json:/seed/smtp-credential.json:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        n8n import:credentials --input=/seed/smtp-credential.json &&
+        n8n import:workflow --separate --input=/seed/workflows &&
+        n8n publish:workflow --id=lendloopErrors01 &&
+        n8n publish:workflow --id=lendloopNotify01 &&
+        n8n publish:workflow --id=lendloopOverdue1
+
+volumes:
+  convex-data:
+  n8n-data:

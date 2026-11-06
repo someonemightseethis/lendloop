@@ -9,6 +9,7 @@ Stack: Next.js 16 (App Router) + TypeScript, Clerk, Convex, n8n, Tailwind CSS 4.
 - [Features](#features)
 - [Architecture](#architecture)
 - [Local setup](#local-setup)
+- [Production](#production)
 - [Environment variables](#environment-variables)
 - [Security and data minimization](#security-and-data-minimization)
 - [Testing](#testing)
@@ -205,6 +206,47 @@ To run the reminder workflow now, open *LendLoop: daily overdue reminders* in n8
 ### Editing workflows
 
 Code node JavaScript lives in `n8n/code/`. After changing it, run `npm run n8n:sync` to write it into the workflow JSON. A test fails if the two drift. If you change workflows in the n8n editor, export them with `n8n export:workflow --id=<id> --pretty`, copy any Code node changes back into `n8n/code/`, and check that nothing secret was added (`npm run check:secrets`).
+
+## Production
+
+<https://lendloop.ahmedrameezaka.com> runs on one small VPS. Everything is self-hosted there.
+
+| Piece | Where | Bound to | Public path |
+| --- | --- | --- | --- |
+| Next.js app | systemd `lendloop.service`, `/var/www/lendloop.ahmedrameezaka.com` | `[::1]:3100` | `/` |
+| Convex backend | Docker Compose project `lendloop-stack`, `/opt/lendloop-stack` ([`deploy/docker-compose.prod.yml`](deploy/docker-compose.prod.yml)) | `127.0.0.1:3210` | `/convex/` (prefix stripped by nginx) |
+| Convex HTTP actions | same container, port 3211 | Docker network only | none |
+| n8n (SQLite) | same compose project | `127.0.0.1:5678` | none |
+
+Why it looks like this:
+
+- **One domain, no extra DNS.** The Convex client keeps the path of its URL, so `NEXT_PUBLIC_CONVEX_URL=https://lendloop.ahmedrameezaka.com/convex` works for queries, mutations and the websocket. nginx proxies `/convex/` to the backend.
+- **n8n is never public.** Convex calls WF1 at `http://n8n:5678/webhook/...` and n8n calls Convex at `http://convex:3211`, both over the compose network. The signatures still apply. To use the n8n editor, open a tunnel with `ssh -L 5678:127.0.0.1:5678 <vps>` and browse to <http://localhost:5678>. The first visit asks you to create the owner account.
+- **Lean on memory.** There's no Convex dashboard container and no n8n Postgres. Containers have memory limits: Convex idles around 75 MiB and n8n around 380 MiB.
+- **The app binds to `localhost`, not `127.0.0.1`.** Clerk's middleware rewrites to `http(s)://localhost:3100`. Next proxies any rewrite whose host differs from the one it was started with, and that proxy fails with a 500.
+- **Clerk** uses the development instance on the production domain (with the dev badge). Swapping to a production instance means new keys in `/etc/lendloop.env` and a new `CLERK_JWT_ISSUER_DOMAIN` on Convex.
+
+Secrets live only on the server, in root-only files:
+
+- `/etc/lendloop.env` holds the Next.js variables ([template](deploy/lendloop.env.example)).
+- `/opt/lendloop-stack/.env` holds the Convex instance secret and admin key, the n8n encryption key and both signing secrets ([template](deploy/stack.env.example)).
+- The SMTP login is the n8n credential `lendloopMailpit1`. It is seeded from `/opt/lendloop-stack/smtp-credential.json` ([template](deploy/smtp-credential.example.json)). Until real values are in it, emails fail, and each failure shows up under *Admin → Automation failures*.
+
+**Deploys.** A push to `main` runs `.github/workflows/deploy-vps.yml`. It calls `scripts/server-update.sh` on the VPS, which resets to `origin/main` and runs `scripts/rebuild.sh`. That script runs `npm ci` when the lockfile changed, then `npx convex deploy` to the self-hosted backend through [`scripts/convex-prod.sh`](scripts/convex-prod.sh), then `next build`, then restarts the service. The Docker stack is not touched.
+
+**Common tasks** (on the VPS, as root):
+
+```bash
+bash /var/www/lendloop.ahmedrameezaka.com/scripts/convex-prod.sh env list        # also: env set, run, logs, data
+cd /opt/lendloop-stack && docker compose ps && docker stats --no-stream
+
+# Re-import the workflows or the SMTP credential (edit smtp-credential.json first):
+cd /opt/lendloop-stack && docker compose stop n8n && docker compose run --rm n8n-seed && docker compose up -d n8n
+
+# Update Convex or n8n: change the pinned image in deploy/docker-compose.prod.yml,
+# copy it to /opt/lendloop-stack/docker-compose.yml, then:
+cd /opt/lendloop-stack && docker compose pull && docker compose up -d
+```
 
 ## Environment variables
 

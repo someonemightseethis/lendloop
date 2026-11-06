@@ -29,6 +29,13 @@ if [[ "$LOCK_HASH" != "$PREV" || ! -d node_modules ]]; then
   echo "$LOCK_HASH" > .deploy-lock-hash
 fi
 
+# Push Convex functions (schema, queries, HTTP actions) to the self-hosted
+# backend first, so the new UI never talks to old functions for long.
+if [[ -f /opt/lendloop-stack/.env ]]; then
+  bash "$APP_DIR/scripts/convex-prod.sh" deploy -y
+  git checkout -- convex/_generated 2>/dev/null || true
+fi
+
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}"
 npm run build
 chown -R www-data:www-data "$APP_DIR"

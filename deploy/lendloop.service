@@ -7,7 +7,10 @@ Type=simple
 WorkingDirectory=/var/www/lendloop.ahmedrameezaka.com
 Environment=NODE_ENV=production
 EnvironmentFile=/etc/lendloop.env
-ExecStart=/var/www/lendloop.ahmedrameezaka.com/node_modules/.bin/next start -H 127.0.0.1 -p 3100
+# Bind to "localhost" (::1 on this box), not 127.0.0.1: Clerk's middleware
+# rewrites to http(s)://localhost:3100, and Next proxies any rewrite whose host
+# differs from the one it was started with, which fails with a 500.
+ExecStart=/var/www/lendloop.ahmedrameezaka.com/node_modules/.bin/next start -H localhost -p 3100
 Restart=always
 RestartSec=3
 User=www-data

@@ -14,6 +14,11 @@ if [[ ! -d "$APP_DIR/.git" ]]; then
   git clone "$REPO" "$APP_DIR"
 fi
 
+# The checkout is owned by www-data (rebuild.sh chowns it) but deploys run as
+# root over SSH; trust this one path so root's git does not refuse it.
+git config --system --get-all safe.directory | grep -qx "$APP_DIR" ||
+  git config --system --add safe.directory "$APP_DIR"
+
 cd "$APP_DIR"
 git fetch --prune origin main
 git reset --hard origin/main
